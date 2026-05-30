@@ -1,0 +1,52 @@
+services:
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: jdbc:postgresql://db:5432/currencytranswexlator
+      DB_USER: wex
+      DB_PASS: wex
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: currencytranswexlator
+      POSTGRES_USER: wex
+      POSTGRES_PASSWORD: wex
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wex -d currencytranswexlator"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Dev only: DB inspection UI ──────────────────────────────────────────────
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    depends_on:
+      - db
+    profiles:
+      - dev   # Only starts with: docker compose --profile dev up
+
+volumes:
+  postgres_data:
