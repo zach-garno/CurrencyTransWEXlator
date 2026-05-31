@@ -67,30 +67,8 @@ resilience4j:
 # ─── Treasury API ─────────────────────────────────────────────────────────────
 treasury:
   api:
-    base-url: ${TREASURY_API_URL:https://api.fiscaldata.treasury.gov/services/api/v1/accounting/od/rates_of_exchange}
-    # Top 20 currencies pre-loaded on startup (Treasury API country-currency names)
-    preload-currencies:
-      - "Canada-Dollar"
-      - "Euro Zone-Euro"
-      - "United Kingdom-Pound"
-      - "Japan-Yen"
-      - "Australia-Dollar"
-      - "Switzerland-Franc"
-      - "China-Renminbi"
-      - "Sweden-Krona"
-      - "New Zealand-Dollar"
-      - "Mexico-Peso"
-      - "Singapore-Dollar"
-      - "Norway-Krone"
-      - "South Korea-Won"
-      - "Brazil-Real"
-      - "India-Rupee"
-      - "South Africa-Rand"
-      - "Denmark-Krone"
-      - "Hong Kong-Dollar"
-      - "Israel-Shekel"
-      - "Thailand-Baht"
-
+    base-url: ${TREASURY_API_URL:https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange}
+    
 # ─── Exchange Rate Refresh ────────────────────────────────────────────────────
 exchange-rate:
   refresh:

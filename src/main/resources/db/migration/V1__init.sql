@@ -26,6 +26,7 @@ COMMENT ON COLUMN transactions.amount_usd IS 'Stored as DECIMAL(19,4). No arithm
 CREATE TABLE exchange_rates (
     id             UUID           NOT NULL,
     currency_code  VARCHAR(100)   NOT NULL,
+    country        VARCHAR(100)   NOT NULL,
     effective_date DATE           NOT NULL,
     record_date    DATE           NOT NULL,
     rate           DECIMAL(19, 6) NOT NULL,
@@ -50,7 +51,7 @@ CREATE TABLE idempotency_records (
     id              BIGSERIAL     NOT NULL,
     idempotency_key VARCHAR(255)  NOT NULL,
     transaction_id  UUID          NOT NULL,
-    request_hash    VARCHAR(255)  NOT NULL,
+    request_hash    VARCHAR(64)   NOT NULL,
     expires_at      TIMESTAMPTZ   NOT NULL,
 
     CONSTRAINT pk_idempotency_records PRIMARY KEY (id),
