@@ -1,0 +1,128 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CurrencyTransWEXlator - Application Configuration
+# All sensitive values are environment variable overrides (12-factor compliant).
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  application:
+    name: currencytranswexlator
+
+  jackson:
+    serialization:
+      write-bigdecimal-as-plain: true   # Prevents 1E+4 scientific notation on BigDecimal values.
+                                        # All other Jackson defaults (JavaTimeModule, ISO dates,
+                                        # fail-on-unknown-properties=false) are Spring Boot OOTB.
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/currencytranswexlator}
+    username: ${DB_USER:wex}
+    password: ${DB_PASS:wex}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate          # Flyway owns schema; JPA never modifies it
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+# ─── Actuator ────────────────────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+
+# ─── Resilience4j ────────────────────────────────────────────────────────────
+resilience4j:
+  circuitbreaker:
+    instances:
+      treasury-api:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true
+  timelimiter:
+    instances:
+      treasury-api:
+        timeoutDuration: 5s
+
+# ─── Treasury API ─────────────────────────────────────────────────────────────
+treasury:
+  api:
+    base-url: ${TREASURY_API_URL:https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v1/accounting/od/rates_of_exchange}
+    
+# ─── Exchange Rate Refresh ────────────────────────────────────────────────────
+exchange-rate:
+  refresh:
+    # Cron: every day at 02:00 UTC. Overridable via env RATE_REFRESH_CRON.
+    cron: ${RATE_REFRESH_CRON:0 0 2 * * *}
+    # Days of history to pre-load on first startup
+    preload-days: 365
+
+# ─── OpenAPI ──────────────────────────────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+
+# ─── Logging ──────────────────────────────────────────────────────────────────
+logging:
+  pattern:
+    console: '{"timestamp":"%d{yyyy-MM-dd HH:mm:ss.SSS}","level":"%p","correlationId":"%X{correlationId}","logger":"%logger{36}","message":"%msg"}%n'
+  level:
+    root: INFO
+    com.wex.currencytranswexlator: INFO
+
+---
+# ─── Dev profile (docker compose local) ──────────────────────────────────────
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    com.wex.currencytranswexlator: DEBUG
+
+---
+# ─── Test profile ─────────────────────────────────────────────────────────────
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+
+treasury:
+  api:
+    base-url: http://localhost:${wiremock.port:8089}
