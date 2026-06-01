@@ -1,17 +1,28 @@
 # CurrencyTransWEXlator
 
-**WEX Inc. Technical Assessment** — Currency conversion service  
-*Zachary Garno, Senior System Architect*
+**WEX Inc. Technical Assessment** - Currency conversion service  
+*Zach Garno, Senior System Architect*
 
+A Spring Boot service that stores USD purchase transactions and retrieves them converted to supported currencies using U.S. Treasury exchange-rate data.
+
+---
+
+## Prerequisites
+
+- Docker Desktop 4.x+
+- Java 21 (only required for local development and running tests outside Docker)
+- Maven 3.9+ (only required for local development and running tests)
 ---
 
 ## Quickstart
 
 ```bash
-# Clone and start - that's it
+# Clone and start - that's it 
 git clone https://github.com/zach-garno/CurrencyTransWEXlator
 cd CurrencyTransWEXlator
 docker compose up --build
+
+#Note: First startup may take ~30 seconds while exchange-rate data is synchronized from the U.S. Treasury API and Flyway migrations are applied.
 ```
 
 | Service   | URL                                           |
@@ -28,6 +39,39 @@ docker compose --profile dev up
 ```
 
 On first startup, exchange rates are automatically pre-loaded from the U.S. Treasury API.
+
+---
+
+## Assessment Scope
+
+This solution intentionally focuses on the requirements defined in the WEX assessment while demonstrating production-oriented architectural patterns.
+
+Out of scope:
+- Authentication and authorization
+- Full ISO 4217 currency normalization
+- Distributed caching
+- Rate limiting and API throttling
+- Event streaming / messaging
+- Performance and load testing
+
+**See the Design History Record (DHR) for rationale and future-state considerations.**
+
+*Development Note*
+
+*AI-assisted development tools were used during implementation for scaffolding, documentation formatting, and code generation. Architectural decisions, debugging, validation, and final implementation review were performed manually.*
+
+---
+
+## Test Coverage
+
+The project currently contains 82 automated tests covering:
+- Domain rules
+- Validation
+- Idempotency behavior
+- Currency conversion
+- Treasury API integration
+- Circuit breaker behavior
+- API contract validation
 
 ---
 
@@ -124,27 +168,3 @@ mvn test -pl . -Dtest="com.wex.currencytranswexlator.unit.**"
 
 See [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) for full Mermaid architecture diagrams.  
 See [`docs/CurrencyTransWEXlator-DHR.docx`](docs/CurrencyTransWEXlator-DHR.docx) for the full Architecture Decision Record.
-
-**Key decisions:**
-- Java 21 (Virtual Threads) + Spring Boot 3.2
-- PostgreSQL 16 with Flyway migrations — Flyway owns schema, JPA validates only
-- Startup pre-load of exchange rates + 24-hour delta refresh (no Redis at this scale)
-- Resilience4j circuit breaker on Treasury API calls
-- `ratesAsOf` on all conversion responses for UI staleness disclosure
-- Plugin architecture (`ExchangeRateProvider` interface) with Treasury fully implemented; Crypto/Loyalty/Custom as stubs
-
----
-
-## Design Notes
-
-**Why `X-Idempotency-Key` is required:**  
-Physical transactions are unique. Network retries and duplicate submissions must not create duplicate records. This is the standard Stripe/Adyen pattern.
-
-**Why no ISO 4217 mapping:**  
-The Treasury API uses its own naming convention. The `CurrencyCodeMapper` interface is defined as a production extension point but not implemented here — it adds domain maintenance burden without value at this scope. See ADR-07 in the DHR.
-
-**Why no Redis:**  
-Exchange rates change quarterly. The local DB table *is* the cache. Redis becomes warranted when p95 latency exceeds 75% of OLA and DB reads are confirmed as the bottleneck.
-
-**Why Java over Node:**  
-For a greenfield I/O-bound service, Node wins on container weight and cold start. Java 21 + Virtual Threads closes the concurrency gap significantly. For this WEX submission, Spring Boot's production defaults (Actuator, Testcontainers, Resilience4j, Flyway) are directly relevant signal. See ADR-01 in the DHR for the full contested analysis.
